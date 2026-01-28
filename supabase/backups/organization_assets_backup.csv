@@ -1,0 +1,2 @@
+id,organization_id,type,name,url,content,is_default,created_by,created_at,updated_at
+9b6a3177-b76b-4cf2-8786-2382c40f424f,58e4685e-d353-496f-b97b-d8dbfb538a77,logo,default-logo,https://api-prod.therama.dev/storage/v1/object/public/org-58e4685e-d353-496f-b97b-d8dbfb538a77/logo-1769633608770.png,,t,,2026-01-28 21:12:43.316497+00,2026-01-28 21:12:43.316497+00

@@ -1,0 +1,160 @@
+{
+
+  "client": {
+    "name": "Acme Retail Pvt Ltd",
+    "contact_name": "Suresh Patel",
+    "contact_email": "contact@acme-retail.com",
+    "contact_phone": "+91-22-87654321",
+    "address": "Plot 42, Market Street",
+    "city": "Mumbai",
+    "state": "Maharashtra",
+    "zipCode": "400012",
+    "country": "India",
+    "logo": "",
+    "header": "",
+    "footer": "",
+    "signature": "",
+    "metadata": {
+      "branch": "Andheri",
+      "tax_id": "TXN-1234"
+    }
+  },
+  "payslips": [
+    {
+      "payslipNumber": "PAY-2026-001-001",
+      "month": "January",
+      "year": 2026,
+      "payPeriod": {
+        "from": "2026-01-01",
+        "to": "2026-01-31"
+      },
+      "employee": {
+        "id": "EMP001",
+        "name": "Rajesh Kumar",
+        "designation": "Senior Software Engineer",
+        "department": "Engineering",
+        "joiningDate": "2022-03-15",
+        "bankAccount": "HDFC-XXXXXXXXX1234",
+        "panNumber": "ABCDE1234F"
+      },
+      "salaryComponents": [
+        {
+          "name": "Basic Salary",
+          "amount": 50000,
+          "type": "earning"
+        },
+        {
+          "name": "House Rent Allowance (HRA)",
+          "amount": 25000,
+          "type": "earning"
+        },
+        {
+          "name": "Special Allowance",
+          "amount": 15000,
+          "type": "earning"
+        },
+        {
+          "name": "Transport Allowance",
+          "amount": 3000,
+          "type": "earning"
+        },
+        {
+          "name": "Performance Bonus",
+          "amount": 10000,
+          "type": "earning"
+        },
+        {
+          "name": "Provident Fund (PF)",
+          "amount": 6000,
+          "type": "deduction"
+        },
+        {
+          "name": "Professional Tax",
+          "amount": 200,
+          "type": "deduction"
+        },
+        {
+          "name": "Income Tax (TDS)",
+          "amount": 8500,
+          "type": "deduction"
+        },
+        {
+          "name": "Health Insurance",
+          "amount": 1500,
+          "type": "deduction"
+        }
+      ],
+      "netPay": 86800,
+      "currency": "INR",
+      "currencySymbol": "₹"
+    },
+    {
+      "payslipNumber": "PAY-2026-001-002",
+      "month": "January",
+      "year": 2026,
+      "payPeriod": {
+        "from": "2026-01-01",
+        "to": "2026-01-31"
+      },
+      "employee": {
+        "id": "EMP002",
+        "name": "Priya Sharma",
+        "designation": "Product Manager",
+        "department": "Product",
+        "joiningDate": "2021-07-20",
+        "bankAccount": "ICICI-XXXXXXXXX5678",
+        "panNumber": "XYZAB5678C"
+      },
+      "salaryComponents": [
+        {
+          "name": "Basic Salary",
+          "amount": 60000,
+          "type": "earning"
+        },
+        {
+          "name": "House Rent Allowance (HRA)",
+          "amount": 30000,
+          "type": "earning"
+        },
+        {
+          "name": "Special Allowance",
+          "amount": 20000,
+          "type": "earning"
+        },
+        {
+          "name": "Transport Allowance",
+          "amount": 3000,
+          "type": "earning"
+        },
+        {
+          "name": "Leadership Bonus",
+          "amount": 15000,
+          "type": "earning"
+        },
+        {
+          "name": "Provident Fund (PF)",
+          "amount": 7200,
+          "type": "deduction"
+        },
+        {
+          "name": "Professional Tax",
+          "amount": 200,
+          "type": "deduction"
+        },
+        {
+          "name": "Income Tax (TDS)",
+          "amount": 12000,
+          "type": "deduction"
+        },
+        {
+          "name": "Health Insurance",
+          "amount": 2000,
+          "type": "deduction"
+        }
+      ],
+      "netPay": 106600,
+      "currency": "INR",
+      "currencySymbol": "₹"
+    }
+  ]
+}

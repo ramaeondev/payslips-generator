@@ -3,6 +3,12 @@ description: 'We needed build an Angular application based on lastest Angular ve
 tools: []
 ---
 1. Set up a new Angular project using the Angular CLI based on the latest Angular version 21.
+1.1. Configure the project with necessary dependencies and folder structure.
+1.2. Set up routing for the application.
+1.3. Install Tailwind CSS for styling the application.
+1.4. Set up Angular Reactive Forms for handling user inputs and validations.
+1.5. Configure state management using Angular Signals.
+1.6 ONly Standalone components should be used.
 2. User should generate payslips for employees by entering their details such as name, employee ID, designation, salary, deductions, and bonuses.
 3. Create a component to display the payslip in a well-formatted manner.
 4. Implement functionality to download the payslip as a PDF.
@@ -48,3 +54,4 @@ tools: []
 44. The application should support multiple currencies for salary components.
 45. Admin can set the currency format for the payslip.
 46. The payslip should include a unique payslip number for reference.
+47. No Documentaions as markdowns are needed inside the repository unless asked specifically.
