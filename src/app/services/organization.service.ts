@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { environment } from '../../environment';
 
 export interface Organization {
@@ -35,7 +35,7 @@ export interface UserOrganization {
   providedIn: 'root'
 })
 export class OrganizationService {
-  private supabase: SupabaseClient;
+  private supabase: ReturnType<typeof createClient>;
   private readonly currentOrg = signal<Organization | null>(null);
   private readonly loading = signal<boolean>(false);
   private readonly errorMessage = signal<string | null>(null);
@@ -67,12 +67,11 @@ export class OrganizationService {
         .replace(/^-+|-+$/g, '');
 
       // Call the database function to create org and link user
-      const { data, error } = await this.supabase
-        .rpc('create_organization_with_user', {
+      const { data, error } = await ((this.supabase as any).rpc('create_organization_with_user', {
           p_user_id: userId,
           p_org_name: orgName,
           p_org_slug: slug
-        });
+        }) as any);
 
       if (error) {
         throw error;
@@ -88,10 +87,11 @@ export class OrganizationService {
 
       this.currentOrg.set(org);
       return { success: true, organization: org };
-    } catch (error: any) {
-      console.error('Error creating organization:', error);
-      this.errorMessage.set(error.message);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error creating organization:', message);
+      this.errorMessage.set(message);
+      return { success: false, error: message };
     } finally {
       this.loading.set(false);
     }
@@ -100,24 +100,7 @@ export class OrganizationService {
   /**
    * Create a storage bucket for the organization
    */
-  private async createOrgBucket(orgId: string): Promise<void> {
-    try {
-      const bucketName = `org-${orgId}`;
-      
-      // Create bucket
-      const { error } = await this.supabase.storage.createBucket(bucketName, {
-        public: true,
-        fileSizeLimit: 5242880, // 5MB
-        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
-      });
 
-      if (error && !error.message.includes('already exists')) {
-        console.error('Error creating bucket:', error);
-      }
-    } catch (error) {
-      console.error('Error creating organization bucket:', error);
-    }
-  }
 
   /**
    * Get current user's organizations
@@ -139,7 +122,7 @@ export class OrganizationService {
         throw error;
       }
 
-      const orgs = (data || []).map((item: any) => item.organizations as Organization);
+      const orgs = (data || []).map((item: { organizations?: Organization }) => item.organizations as Organization);
       
       // Set first org as current if available
       if (orgs.length > 0 && !this.currentOrg()) {
@@ -147,9 +130,10 @@ export class OrganizationService {
       }
 
       return orgs;
-    } catch (error: any) {
-      console.error('Error fetching organizations:', error);
-      this.errorMessage.set(error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error fetching organizations:', message);
+      this.errorMessage.set(message);
       return [];
     } finally {
       this.loading.set(false);
@@ -175,9 +159,10 @@ export class OrganizationService {
 
       this.currentOrg.set(data);
       return data;
-    } catch (error: any) {
-      console.error('Error fetching organization:', error);
-      this.errorMessage.set(error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error fetching organization:', message);
+      this.errorMessage.set(message);
       return null;
     } finally {
       this.loading.set(false);
@@ -205,10 +190,11 @@ export class OrganizationService {
 
       this.currentOrg.set(data);
       return { success: true };
-    } catch (error: any) {
-      console.error('Error updating organization:', error);
-      this.errorMessage.set(error.message);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error updating organization:', message);
+      this.errorMessage.set(message);
+      return { success: false, error: message };
     } finally {
       this.loading.set(false);
     }
@@ -242,16 +228,18 @@ export class OrganizationService {
         .from(bucketName)
         .getPublicUrl(fileName);
 
-      const publicUrl = (data as any)?.publicUrl;
+      const dataPublic = data as { publicUrl?: string } | null;
+      const publicUrl = dataPublic?.publicUrl ?? null;
 
       // Update organization with logo URL
-      await this.updateOrganization(orgId, { logo_url: publicUrl });
+      await this.updateOrganization(orgId, { logo_url: publicUrl ?? undefined });
 
       return { success: true, url: publicUrl };
-    } catch (error: any) {
-      console.error('Error uploading logo:', error);
-      this.errorMessage.set(error.message);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error uploading logo:', message);
+      this.errorMessage.set(message);
+      return { success: false, error: message };
     } finally {
       this.loading.set(false);
     }

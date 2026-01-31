@@ -1,4 +1,5 @@
 import { Component, signal, computed, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { PayslipService } from '../services/payslip.service';
@@ -9,7 +10,7 @@ import { OrganizationService } from '../services/organization.service';
 
 @Component({
   selector: 'app-payslip-editor',
-  imports: [FormsModule, PayslipPreviewComponent, RouterLink],
+  imports: [CommonModule, FormsModule, PayslipPreviewComponent, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="min-h-screen bg-gray-50">
@@ -103,19 +104,17 @@ import { OrganizationService } from '../services/organization.service';
             </div>
 
             <!-- Error Display -->
-            @if (error()) {
-              <div class="p-4 bg-red-50 border-t border-red-200">
-                <div class="flex items-start">
-                  <svg class="w-5 h-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                  </svg>
-                  <div class="ml-3">
-                    <h3 class="text-sm font-medium text-red-800">Validation Error</h3>
-                    <p class="text-sm text-red-700 mt-1">{{ error() }}</p>
-                  </div>
+            <div *ngIf="error()" class="p-4 bg-red-50 border-t border-red-200">
+              <div class="flex items-start">
+                <svg class="w-5 h-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-red-800">Validation Error</h3>
+                  <p class="text-sm text-red-700 mt-1">{{ error() }}</p>
                 </div>
               </div>
-            }
+            </div>
 
             <!-- JSON Guide -->
             <div class="p-4 bg-blue-50 border-t">
@@ -150,34 +149,32 @@ import { OrganizationService } from '../services/organization.service';
             <div class="p-4 border-b bg-gray-50 sticky top-0 z-10">
               <div class="flex justify-between items-center">
                 <h2 class="text-xl font-semibold text-gray-800">Payslip Preview</h2>
-                @if (payslipData()?.payslips && payslipData()!.payslips.length > 1) {
-                  <div class="flex items-center gap-2">
+                <div *ngIf="payslipData()?.payslips && payslipData()!.payslips.length > 1" class="flex items-center gap-2">
                     <label class="text-sm font-medium text-gray-700">Payslip:</label>
                     <select
                       [value]="selectedPayslipIndex()"
                       (change)="onPayslipSelect($event)"
                       class="px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
-                      @for (payslip of payslipData()!.payslips; track payslip.payslipNumber; let i = $index) {
-                        <option [value]="i">
-                          {{ payslip.employee.name }} - {{ payslip.month }} {{ payslip.year }}
-                        </option>
-                      }
+                      <option *ngFor="let payslip of payslipData()!.payslips; let i = index" [value]="i">
+                        {{ payslip.employee.name }} - {{ payslip.month }} {{ payslip.year }}
+                      </option>
                     </select>
                   </div>
-                }
               </div>
             </div>
             
             <div class="p-4">
-              @if (currentPayslip()) {
+              <div *ngIf="currentPayslip(); else noPreview">
                 <app-payslip-preview
                   [payslipData]="currentPayslip()"
                   [organization]="payslipData()!.organization"
                   [client]="resolvedClient()"
                   [elementId]="'payslip-' + selectedPayslipIndex()"
-                />
-              } @else {
+                ></app-payslip-preview>
+              </div>
+
+              <ng-template #noPreview>
                 <div class="flex flex-col items-center justify-center h-96 text-gray-400">
                   <svg class="w-24 h-24 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -185,7 +182,7 @@ import { OrganizationService } from '../services/organization.service';
                   <p class="text-lg font-medium">No payslip to preview</p>
                   <p class="text-sm mt-2">Enter valid JSON data to see the preview</p>
                 </div>
-              }
+              </ng-template>
             </div>
           </div>
         </div>
@@ -264,23 +261,25 @@ export class PayslipEditorComponent implements OnInit {
   async loadSampleData(): Promise<void> {
     try {
       const response = await fetch('/sample-payslip.json');
-      const data = await response.json();
+      const raw: unknown = await response.json();
+      if (typeof raw !== 'object' || raw === null) throw new Error('Invalid sample payload');
+      const data = raw as Record<string, unknown>;
 
       // If organization settings are available, inject them into the sample
       const org = this.currentOrg();
       if (org) {
-        data.organization = data.organization || {};
-        data.organization.name = org.name || data.organization.name;
-        data.organization.address = org.address || data.organization.address;
-        data.organization.city = org.city || data.organization.city;
-        data.organization.state = org.state || data.organization.state;
-        data.organization.zipCode = org.postal_code || data.organization.zipCode;
-        data.organization.country = org.country || data.organization.country;
-        data.organization.phone = org.phone || data.organization.phone;
-        data.organization.email = org.email || data.organization.email;
-        data.organization.website = org.website || data.organization.website;
-        // Prefer the stored public logo URL when available
-        data.organization.logo = org.logo_url || data.organization.logo;
+        const orgObj = (data['organization'] as Record<string, unknown> | undefined) ?? {};
+        orgObj['name'] = org.name ?? orgObj['name'];
+        orgObj['address'] = org.address ?? orgObj['address'];
+        orgObj['city'] = org.city ?? orgObj['city'];
+        orgObj['state'] = org.state ?? orgObj['state'];
+        orgObj['zipCode'] = org.postal_code ?? orgObj['zipCode'];
+        orgObj['country'] = org.country ?? orgObj['country'];
+        orgObj['phone'] = org.phone ?? orgObj['phone'];
+        orgObj['email'] = org.email ?? orgObj['email'];
+        orgObj['website'] = org.website ?? orgObj['website'];
+        orgObj['logo'] = org.logo_url ?? orgObj['logo'];
+        data['organization'] = orgObj;
       }
 
       // If a client is selected, inject client info
@@ -288,20 +287,21 @@ export class PayslipEditorComponent implements OnInit {
       if (clientId) {
         const client = await this.clientService.getClientWithAssets(clientId);
         if (client) {
-          data.client = data.client || {};
-          data.client.name = client.name || data.client.name;
-          data.client.contact_name = client.contact_name || data.client.contact_name;
-          data.client.contact_email = client.contact_email || data.client.contact_email;
-          data.client.contact_phone = client.contact_phone || data.client.contact_phone;
-          data.client.address = client.address || data.client.address;
-          data.client.city = client.city || data.client.city;
-          data.client.state = client.state || data.client.state;
-          data.client.zipCode = client.postal_code || data.client.zipCode;
-          data.client.country = client.country || data.client.country;
-          data.client.logo = client.logo || data.client.logo;
-          data.client.header = client.header || data.client.header;
-          data.client.footer = client.footer || data.client.footer;
-          data.client.signature = client.signature || data.client.signature;
+          const clientObj = (data['client'] as Record<string, unknown> | undefined) ?? {};
+          clientObj['name'] = client.name ?? clientObj['name'];
+          clientObj['contact_name'] = client.contact_name ?? clientObj['contact_name'];
+          clientObj['contact_email'] = client.contact_email ?? clientObj['contact_email'];
+          clientObj['contact_phone'] = client.contact_phone ?? clientObj['contact_phone'];
+          clientObj['address'] = client.address ?? clientObj['address'];
+          clientObj['city'] = client.city ?? clientObj['city'];
+          clientObj['state'] = client.state ?? clientObj['state'];
+          clientObj['zipCode'] = client.postal_code ?? clientObj['zipCode'];
+          clientObj['country'] = client.country ?? clientObj['country'];
+          clientObj['logo'] = client.logo ?? clientObj['logo'];
+          clientObj['header'] = client.header ?? clientObj['header'];
+          clientObj['footer'] = client.footer ?? clientObj['footer'];
+          clientObj['signature'] = client.signature ?? clientObj['signature'];
+          data['client'] = clientObj;
         }
       }
 
@@ -324,17 +324,20 @@ export class PayslipEditorComponent implements OnInit {
     const current = this.jsonInput();
     if (current.trim()) {
       try {
-        const parsed = JSON.parse(current);
+        const parsed: unknown = JSON.parse(current);
+        // Validate basic structure before formatting
+        if (typeof parsed !== 'object' || parsed === null) throw new Error('Invalid JSON');
         const formatted = JSON.stringify(parsed, null, 2);
         this.jsonInput.set(formatted);
-      } catch (error) {
-        console.error('Invalid JSON, cannot format:', error);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('Invalid JSON, cannot format:', message);
       }
     }
   }
 
   async logout(): Promise<void> {
     await this.authService.signOut();
-    this.router.navigate(['/']);
+    void this.router.navigate(['/']);
   }
 }

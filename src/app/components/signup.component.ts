@@ -1,7 +1,7 @@
 import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
 @Component({
@@ -39,12 +39,12 @@ import { AuthService } from '../services/auth.service';
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 placeholder="Acme Corporation"
               />
-              @if (signupForm.get('orgName')?.invalid && signupForm.get('orgName')?.touched) {
+              @if (controlHasError('orgName')) {
                 <p class="mt-1 text-sm text-red-600">
-                  @if (signupForm.get('orgName')?.errors?.['required']) {
+                  @if (controlHasError('orgName', 'required')) {
                     Organization name is required
                   }
-                  @if (signupForm.get('orgName')?.errors?.['minlength']) {
+                  @if (controlHasError('orgName', 'minlength')) {
                     Organization name must be at least 2 characters
                   }
                 </p>
@@ -63,12 +63,12 @@ import { AuthService } from '../services/auth.service';
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 placeholder="you@example.com"
               />
-              @if (signupForm.get('email')?.invalid && signupForm.get('email')?.touched) {
+              @if (controlHasError('email')) {
                 <p class="mt-1 text-sm text-red-600">
-                  @if (signupForm.get('email')?.errors?.['required']) {
+                  @if (controlHasError('email', 'required')) {
                     Email is required
                   }
-                  @if (signupForm.get('email')?.errors?.['email']) {
+                  @if (controlHasError('email', 'email')) {
                     Please enter a valid email address
                   }
                 </p>
@@ -87,15 +87,15 @@ import { AuthService } from '../services/auth.service';
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 placeholder="••••••••"
               />
-              @if (signupForm.get('password')?.invalid && signupForm.get('password')?.touched) {
+              @if (controlHasError('password')) {
                 <p class="mt-1 text-sm text-red-600">
-                  @if (signupForm.get('password')?.errors?.['required']) {
+                  @if (controlHasError('password', 'required')) {
                     Password is required
                   }
-                  @if (signupForm.get('password')?.errors?.['minlength']) {
+                  @if (controlHasError('password', 'minlength')) {
                     Password must be at least 8 characters
                   }
-                  @if (signupForm.get('password')?.errors?.['pattern']) {
+                  @if (controlHasError('password', 'pattern')) {
                     Password must contain uppercase, lowercase, number, and special character
                   }
                 </p>
@@ -114,14 +114,14 @@ import { AuthService } from '../services/auth.service';
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 placeholder="••••••••"
               />
-              @if (signupForm.get('confirmPassword')?.invalid && signupForm.get('confirmPassword')?.touched) {
+              @if (controlHasError('confirmPassword')) {
                 <p class="mt-1 text-sm text-red-600">
-                  @if (signupForm.get('confirmPassword')?.errors?.['required']) {
+                  @if (controlHasError('confirmPassword', 'required')) {
                     Please confirm your password
                   }
                 </p>
               }
-              @if (signupForm.errors?.['passwordMismatch'] && signupForm.get('confirmPassword')?.touched) {
+              @if (signupForm.errors?.['passwordMismatch'] && this.signupForm.get('confirmPassword')?.touched) {
                 <p class="mt-1 text-sm text-red-600">
                   Passwords do not match
                 </p>
@@ -210,7 +210,6 @@ import { AuthService } from '../services/auth.service';
 export class SignupComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
 
   readonly loading = signal(false);
   readonly errorMessage = signal('');
@@ -231,9 +230,21 @@ export class SignupComponent {
     }, { validators: this.passwordMatchValidator });
   }
 
+  // helpers for template validity checks (bound)
+  controlHasError = (name: string, errorKey?: string): boolean => {
+    const ctrl = this.signupForm.get(name);
+    if (!ctrl) return false;
+    if (errorKey) {
+      const errs = ctrl.errors as unknown as Record<string, unknown> | null;
+      const exists = errs ? Object.prototype.hasOwnProperty.call(errs, errorKey) : false;
+      return !!(exists && ctrl.touched);
+    }
+    return !!(ctrl.invalid && ctrl.touched);
+  };
+
   passwordMatchValidator(form: FormGroup): { [key: string]: boolean } | null {
-    const password = form.get('password')?.value;
-    const confirmPassword = form.get('confirmPassword')?.value;
+    const password: string = String(form.get('password')?.value ?? '');
+    const confirmPassword: string = String(form.get('confirmPassword')?.value ?? '');
     return password === confirmPassword ? null : { passwordMismatch: true };
   }
 
@@ -247,13 +258,13 @@ export class SignupComponent {
     this.errorMessage.set('');
     this.successMessage.set('');
 
-    const { email, password, orgName } = this.signupForm.value;
+    const { email, password, orgName } = this.signupForm.value as { email: string; password: string; orgName: string };
 
     try {
       const result = await this.authService.signUpWithOrg(email, password, orgName);
       
       if (result.error) {
-        this.errorMessage.set(result.error.message);
+        this.errorMessage.set(result.error);
       } else {
         this.successMessage.set('Account created successfully! Please check your email to verify your account before logging in.');
         this.signupForm.reset();
@@ -261,8 +272,9 @@ export class SignupComponent {
         // Don't auto-redirect - let user read the message
         // They need to confirm email first
       }
-    } catch (error: any) {
-      this.errorMessage.set(error.message || 'An unexpected error occurred');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.errorMessage.set(message || 'An unexpected error occurred');
     } finally {
       this.loading.set(false);
     }

@@ -1,5 +1,5 @@
 import { Injectable, signal, inject } from '@angular/core';
-import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js';
+import { createClient, User, Session } from '@supabase/supabase-js';
 import { environment } from '../../environment';
 import { OrganizationService } from './organization.service';
 
@@ -8,7 +8,7 @@ import { OrganizationService } from './organization.service';
 })
 export class AuthService {
   private readonly orgService = inject(OrganizationService);
-  private supabase: SupabaseClient;
+  private supabase: ReturnType<typeof createClient>;
   private readonly currentUser = signal<User | null>(null);
   private readonly currentSession = signal<Session | null>(null);
   private readonly loading = signal<boolean>(true);
@@ -25,7 +25,7 @@ export class AuthService {
       environment.supabase.anonKey
     );
 
-    this.initializeAuth();
+    void this.initializeAuth();
   }
 
   private async initializeAuth(): Promise<void> {
@@ -78,7 +78,7 @@ export class AuthService {
     }
   }
 
-  async signUpWithOrg(email: string, password: string, orgName: string): Promise<{ success: boolean; error?: any }> {
+  async signUpWithOrg(email: string, password: string, orgName: string): Promise<{ success: boolean; error?: string }> {
     this.errorMessage.set(null);
     this.loading.set(true);
 
@@ -90,12 +90,13 @@ export class AuthService {
       });
 
       if (error) {
-        this.errorMessage.set(error.message);
-        return { success: false, error };
+        const msg = error.message || String(error);
+        this.errorMessage.set(msg);
+        return { success: false, error: msg };
       }
 
       if (!data.user) {
-        return { success: false, error: { message: 'Signup failed - no user created' } };
+        return { success: false, error: 'Signup failed - no user created' };
       }
 
       // Create organization for the user
@@ -105,7 +106,7 @@ export class AuthService {
         // If org creation fails, we should ideally rollback the user creation
         // For now, we'll just return the error
         this.errorMessage.set(orgResult.error || 'Failed to create organization');
-        return { success: false, error: { message: orgResult.error } };
+        return { success: false, error: orgResult.error || 'Failed to create organization' };
       }
 
       this.currentUser.set(data.user);
@@ -115,7 +116,7 @@ export class AuthService {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unexpected error occurred';
       this.errorMessage.set(message);
-      return { success: false, error: { message } };
+      return { success: false, error: message };
     } finally {
       this.loading.set(false);
     }

@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { environment } from '../../environment';
 
 export interface Client {
@@ -43,7 +43,7 @@ export interface ClientAsset {
   providedIn: 'root'
 })
 export class ClientService {
-  private supabase: SupabaseClient;
+  private supabase: ReturnType<typeof createClient>;
   private readonly clients = signal<Client[] | null>(null);
 
   readonly clientList = this.clients.asReadonly();
@@ -57,16 +57,16 @@ export class ClientService {
 
   async getClients(orgId: string): Promise<Client[]> {
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await (this.supabase
         .from('clients')
         .select('*')
         .eq('organization_id', orgId)
-        .order('name', { ascending: true });
+        .order('name', { ascending: true }) as any);
 
       if (error) throw error;
       this.clients.set(data || []);
       return data || [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching clients:', error);
       return [];
     }
@@ -82,79 +82,82 @@ export class ClientService {
 
       if (error) throw error;
       return data || null;
-    } catch (error: any) {
-      console.error('Error fetching client:', error);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error fetching client:', message);
       return null;
     }
   }
 
   async createClient(orgId: string, payload: Partial<Client>): Promise<{ success: boolean; client?: Client; error?: string }> {
     try {
-      const insertPayload: any = { ...payload, organization_id: orgId };
+      const insertPayload: Partial<Client> & { organization_id: string } = { ...payload, organization_id: orgId };
       // ensure metadata is JSONB
       if (payload.metadata && typeof payload.metadata === 'object') insertPayload.metadata = payload.metadata;
 
-      const { data, error } = await this.supabase
+      const { data, error } = await (this.supabase
         .from('clients')
-        .insert(insertPayload)
+        .insert(insertPayload as any)
         .select()
-        .single();
+        .single() as any);
 
       if (error) throw error;
       // refresh clients cache
       await this.getClients(orgId);
       return { success: true, client: data as Client };
-    } catch (error: any) {
-      console.error('Error creating client:', error);
-      // expose full error for debugging
-      return { success: false, error: error.message || String(error) };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error creating client:', message);
+      return { success: false, error: message };
     }
   }
 
   async updateClient(clientId: string, updates: Partial<Client>): Promise<{ success: boolean; error?: string }> {
     try {
-      const payload: any = { ...updates };
+      const payload: Partial<Client> = { ...updates };
       if (updates.metadata && typeof updates.metadata === 'object') payload.metadata = updates.metadata;
 
-      const { error } = await this.supabase
+      const { error } = await ((this.supabase as any)
         .from('clients')
-        .update(payload)
-        .eq('id', clientId);
+        .update(payload as any)
+        .eq('id', clientId) as any);
 
       if (error) throw error;
       return { success: true };
-    } catch (error: any) {
-      console.error('Error updating client:', error);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error updating client:', message);
+      return { success: false, error: message };
     }
   }
 
   async deleteClient(clientId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const { error } = await this.supabase
+      const { error } = await (this.supabase
         .from('clients')
         .delete()
-        .eq('id', clientId);
+        .eq('id', clientId) as any);
 
       if (error) throw error;
       return { success: true };
-    } catch (error: any) {
-      console.error('Error deleting client:', error);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error deleting client:', message);
+      return { success: false, error: message };
     }
   }
 
   async getClientAssets(clientId: string): Promise<ClientAsset[]> {
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await (this.supabase
         .from('client_assets')
         .select('*')
         .eq('client_id', clientId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as any);
 
       if (error) throw error;
       return data || [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching client assets:', error);
       return [];
     }
@@ -179,31 +182,33 @@ export class ClientService {
       if (uploadError) throw uploadError;
 
       const { data } = this.supabase.storage.from(bucketName).getPublicUrl(path);
-      const publicUrl = (data as any)?.publicUrl || null;
+      const dataPublic = data as { publicUrl?: string } | null;
+      const publicUrl = dataPublic?.publicUrl ?? null;
 
-      const { data: assetData, error } = await this.supabase
+      const { data: assetData, error } = await (this.supabase
         .from('client_assets')
-        .insert({ client_id: clientId, type, name: name || file.name, url: publicUrl })
+        .insert({ client_id: clientId, type, name: name || file.name, url: publicUrl } as any)
         .select()
-        .single();
+        .single() as any);
 
       if (error) throw error;
 
       return { success: true, asset: assetData as ClientAsset };
-    } catch (error: any) {
-      console.error('Error uploading client asset:', error);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error uploading client asset:', message);
+      return { success: false, error: message };
     }
   }
 
   async deleteClientAsset(assetId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data: asset, error: selErr } = await this.supabase.from('client_assets').select('*').eq('id', assetId).single();
+      const { data: asset, error: selErr } = await (this.supabase.from('client_assets').select('*').eq('id', assetId).single() as any);
       if (selErr) throw selErr;
 
       if (asset && asset.url) {
         // Try removing object from storage (best-effort)
-        const m = (asset.url as string).match(/\/org-([^\/]+)\/(.+)$/);
+        const m = (asset.url as string).match(/\/org-([^/]+)\/(.+)$/);
         if (m) {
           const bucket = `org-${m[1]}`;
           const path = m[2];
@@ -218,9 +223,10 @@ export class ClientService {
       const { error } = await this.supabase.from('client_assets').delete().eq('id', assetId);
       if (error) throw error;
       return { success: true };
-    } catch (error: any) {
-      console.error('Error deleting client asset:', error);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error deleting client asset:', message);
+      return { success: false, error: message };
     }
   }
 
@@ -232,18 +238,19 @@ export class ClientService {
 
       const assets = await this.getClientAssets(clientId);
       for (const a of assets) {
-        if (a.type === 'logo' && !client.logo) client.logo = a.url;
-        if (a.type === 'header' && !client.header) client.header = a.url;
-        if (a.type === 'footer' && !client.footer) client.footer = a.url;
-        if (a.type === 'signature' && !client.signature) client.signature = a.url;
+        if (a.type === 'logo' && !client.logo && typeof a.url === 'string') client.logo = a.url;
+        if (a.type === 'header' && !client.header && typeof a.url === 'string') client.header = a.url;
+        if (a.type === 'footer' && !client.footer && typeof a.url === 'string') client.footer = a.url;
+        if (a.type === 'signature' && !client.signature && typeof a.url === 'string') client.signature = a.url;
       }
 
       // convenience mapping for UI
-      (client as any).zipCode = client.postal_code || (client as any).zipCode;
+      client.zipCode = client.postal_code || client.zipCode;
 
       return client;
-    } catch (error: any) {
-      console.error('Error getting client with assets:', error);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Error getting client with assets:', message);
       return null;
     }
   }

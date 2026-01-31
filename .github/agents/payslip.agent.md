@@ -29,9 +29,11 @@ tools: []
 19. Any number of salary components can be added by the admin.
 20. Use tailwindcss for styling the application.
 21. Use Angular Reactive Forms for handling user inputs and validations.
-22. Use ONly angular signals for state management and any variable handling.
-23. Ensure the application follows best practices for Angular development.
-24. Deploy the application to a suitable hosting platform using gitHub actions for CI/CD we prefer vercel or netlify.
+22. Use Angular 21 template control-flow macros: prefer `@if` and `@for` in templates — **do not** use `*ngIf` or `*ngFor`.
+23. Use Angular Signals for all component and application state (`signal`, `computed`, `effect`) with explicit TypeScript types. Avoid mutable plain variables for reactive state.
+24. The `any` type is banned across the repository. Use explicit interfaces, `unknown` in `catch` blocks (with proper narrowing), or precise types instead of `any`.
+25. Ensure the application follows best practices for Angular development.
+26. Deploy the application to a suitable hosting platform using GitHub Actions for CI/CD (we prefer Vercel or Netlify).
 25. Provide documentation on how to set up and run the application locally.
 26. Include unit tests for all components and functionalities.
 27. We needed generate payslips based on the json data as well as manual data entry.

@@ -36,9 +36,9 @@ import { CommonModule } from '@angular/common';
                 formControlName="email"
                 placeholder="you@example.com"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                [class.border-red-500]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+                [class.border-red-500]="emailInvalid()"
               />
-              @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+              @if (emailInvalid()) {
                 <p class="mt-1 text-sm text-red-600">Please enter a valid email address</p>
               }
             </div>
@@ -54,9 +54,9 @@ import { CommonModule } from '@angular/common';
                 formControlName="password"
                 placeholder="••••••••"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                [class.border-red-500]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+                [class.border-red-500]="passwordInvalid()"
               />
-              @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+              @if (passwordInvalid()) {
                 <p class="mt-1 text-sm text-red-600">Password must be at least 6 characters</p>
               }
             </div>
@@ -161,17 +161,28 @@ export class LoginComponent {
     });
   }
 
-  async onSubmit(): Promise<void> {
+  // Bound helpers for template to avoid unbound-method lint warnings
+  emailInvalid = (): boolean => {
+    const ctrl = this.loginForm.get('email');
+    return !!(ctrl && ctrl.invalid && ctrl.touched);
+  };
+
+  passwordInvalid = (): boolean => {
+    const ctrl = this.loginForm.get('password');
+    return !!(ctrl && ctrl.invalid && ctrl.touched);
+  };
+
+  onSubmit = async (): Promise<void> => {
     if (this.loginForm.invalid) return;
 
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    const { email, password } = this.loginForm.value;
+    const { email, password } = this.loginForm.value as { email: string; password: string };
     const result = await this.authService.signIn(email, password);
 
     if (result.success) {
-      this.router.navigate(['/dashboard']);
+      void this.router.navigate(['/dashboard']);
     } else {
       this.errorMessage.set(result.error || 'Login failed. Please try again.');
       this.isLoading.set(false);

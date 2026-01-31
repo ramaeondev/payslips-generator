@@ -15,17 +15,28 @@ export class PayslipService {
 
   validateAndSetPayslipData(jsonString: string): boolean {
     try {
-      const parsed = JSON.parse(jsonString);
-      
+      const raw: unknown = JSON.parse(jsonString);
+      if (typeof raw !== 'object' || raw === null) {
+        this.validationError.set('Invalid JSON structure. Must be an object.');
+        return false;
+      }
+
+      const parsed = raw as Record<string, unknown>;
+
       // Basic validation: must include payslips and either organization or client info
-      if (!parsed.payslips || !Array.isArray(parsed.payslips)) {
+      const payslipsRaw = parsed['payslips'];
+      if (!Array.isArray(payslipsRaw)) {
         this.validationError.set('Invalid JSON structure. Must include payslips as an array.');
         return false;
       }
 
-      const hasOrganization = !!parsed.organization;
-      const hasTopLevelClient = !!parsed.client;
-      const hasPerPayslipClient = parsed.payslips.some((p: any) => !!p.client);
+      const hasOrganization = !!parsed['organization'];
+      const hasTopLevelClient = !!parsed['client'];
+
+      // Check per-payslip client presence safely
+      const hasPerPayslipClient = payslipsRaw.some((p) => {
+        return typeof p === 'object' && p !== null && !!(p as Record<string, unknown>)['client'];
+      });
 
       if (!hasOrganization && !hasTopLevelClient && !hasPerPayslipClient) {
         this.validationError.set('Invalid JSON structure. Must include either organization or client information (top-level or per-payslip).');
@@ -33,55 +44,68 @@ export class PayslipService {
       }
 
       // Validate organization if present
-      if (parsed.organization) {
-        if (!parsed.organization.name || !parsed.organization.address) {
+      if (parsed['organization'] && typeof parsed['organization'] === 'object') {
+        const org = parsed['organization'] as Record<string, unknown>;
+        if (!org['name'] || !org['address']) {
           this.validationError.set('Organization must have name and address.');
           return false;
         }
       }
 
       // Validate top-level client if present and auto-generate missing fields
-      if (parsed.client) {
-        if (!parsed.client.id) {
-          parsed.client.id = `client-${Date.now()}`;
-          console.info('Auto-generated client id for top-level client:', parsed.client.id);
+      if (parsed['client'] && typeof parsed['client'] === 'object') {
+        const client = parsed['client'] as Record<string, unknown>;
+        if (!client['id']) {
+          client['id'] = `client-${Date.now()}`;
+          console.info('Auto-generated client id for top-level client:', String(client['id']));
         }
-        if (!parsed.client.name) {
-          parsed.client.name = `Client ${parsed.client.id}`;
-          console.info('Auto-generated client name for top-level client:', parsed.client.name);
+        if (!client['name']) {
+          client['name'] = `Client ${String(client['id'])}`;
+          console.info('Auto-generated client name for top-level client:', String(client['name']));
         }
       }
 
       // Validate each payslip
-      for (const payslip of parsed.payslips) {
-        if (!payslip.employee || !payslip.salaryComponents) {
+      const payslips = payslipsRaw as unknown[];
+      for (const p of payslips) {
+        if (typeof p !== 'object' || p === null) {
+          this.validationError.set('Each payslip must be an object.');
+          return false;
+        }
+        const payslip = p as Record<string, unknown>;
+
+        if (!payslip['employee'] || !Array.isArray(payslip['salaryComponents'])) {
           this.validationError.set('Each payslip must have employee and salaryComponents.');
           return false;
         }
 
-        if (!payslip.employee.id || !payslip.employee.name) {
+        const employee = payslip['employee'] as Record<string, unknown>;
+        if (!employee['id'] || !employee['name']) {
           this.validationError.set('Employee must have id and name.');
           return false;
         }
 
         // If payslip includes a client, validate it and auto-generate missing fields
-        if (payslip.client) {
-          if (!payslip.client.id) {
-            payslip.client.id = `client-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            console.info('Auto-generated client id for payslip:', payslip.client.id);
+        if (payslip['client'] && typeof payslip['client'] === 'object') {
+          const pc = payslip['client'] as Record<string, unknown>;
+          if (!pc['id']) {
+            pc['id'] = `client-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            console.info('Auto-generated client id for payslip:', String(pc['id']));
           }
-          if (!payslip.client.name) {
-            payslip.client.name = `Client ${payslip.client.id}`;
-            console.info('Auto-generated client name for payslip:', payslip.client.name);
+          if (!pc['name']) {
+            pc['name'] = `Client ${String(pc['id'])}`;
+            console.info('Auto-generated client name for payslip:', String(pc['name']));
           }
         }
       }
 
-      this.payslipData.set(parsed);
+      // Safe to set (we validated structure above)
+      this.payslipData.set(parsed as unknown as PayslipDocument);
       this.validationError.set(null);
       return true;
-    } catch (error) {
-      this.validationError.set('Invalid JSON format: ' + (error as Error).message);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.validationError.set('Invalid JSON format: ' + msg);
       return false;
     }
   }
@@ -195,12 +219,13 @@ export class PayslipService {
       }
 
       pdf.save(filename);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       // Detect unsupported color function errors and provide actionable message
-      if (error && /unsupported color function|oklch|color\(/i.test(error.message)) {
-        console.error('PDF generation failed due to unsupported CSS color function. Sanitizing styles was applied as a fallback.', error);
+      if (/unsupported color function|oklch|color\(/i.test(message)) {
+        console.error('PDF generation failed due to unsupported CSS color function. Sanitizing styles was applied as a fallback.', message);
       } else {
-        console.error('Error generating PDF:', error);
+        console.error('Error generating PDF:', message);
       }
     }
   }

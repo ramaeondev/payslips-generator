@@ -88,7 +88,7 @@ import { AuthService } from '../services/auth.service';
                     class="hidden"
                   />
                   <button
-                    (click)="fileInput.click()"
+                    (click)="triggerFileInput(fileInput)"
                     [disabled]="uploadingLogo()"
                     class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
@@ -335,7 +335,7 @@ export class SettingsComponent implements OnInit {
     const user = this.authService.user();
 
     if (!user) {
-      this.router.navigate(['/login']);
+      await this.router.navigate(['/login']);
       return;
     }
 
@@ -371,7 +371,8 @@ export class SettingsComponent implements OnInit {
     }
 
     const org = this.currentOrg();
-    if (!org) {
+    const orgId = org?.id;
+    if (!orgId) {
       this.errorMessage.set('No organization found');
       return;
     }
@@ -381,7 +382,33 @@ export class SettingsComponent implements OnInit {
     this.successMessage.set('');
 
     try {
-      const result = await this.orgService.updateOrganization(org.id, this.settingsForm.value);
+      const nameVal: string = String(this.settingsForm.get('name')?.value ?? '');
+      const emailVal: string = String(this.settingsForm.get('email')?.value ?? '');
+      const phoneVal: string = String(this.settingsForm.get('phone')?.value ?? '');
+      const websiteVal: string = String(this.settingsForm.get('website')?.value ?? '');
+      const taxIdVal: string = String(this.settingsForm.get('tax_id')?.value ?? '');
+      const addressVal: string = String(this.settingsForm.get('address')?.value ?? '');
+      const cityVal: string = String(this.settingsForm.get('city')?.value ?? '');
+      const stateVal: string = String(this.settingsForm.get('state')?.value ?? '');
+      const postalCodeVal: string = String(this.settingsForm.get('postal_code')?.value ?? '');
+      const countryVal: string = String(this.settingsForm.get('country')?.value ?? '');
+
+      const updates: Partial<Organization> = {
+        name: nameVal,
+        email: emailVal,
+        phone: phoneVal,
+        website: websiteVal,
+        tax_id: taxIdVal,
+        address: addressVal,
+        city: cityVal,
+        state: stateVal,
+        postal_code: postalCodeVal,
+        country: countryVal
+      };
+
+      // The form fields were explicitly coerced and typed above; pass securely to the service.
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const result = await this.orgService.updateOrganization(orgId, updates);
       
       if (result.success) {
         this.successMessage.set('Settings saved successfully!');
@@ -389,8 +416,9 @@ export class SettingsComponent implements OnInit {
       } else {
         this.errorMessage.set(result.error || 'Failed to save settings');
       }
-    } catch (error: any) {
-      this.errorMessage.set(error.message || 'An unexpected error occurred');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.errorMessage.set(message || 'An unexpected error occurred');
     } finally {
       this.saving.set(false);
     }
@@ -431,13 +459,19 @@ export class SettingsComponent implements OnInit {
       } else {
         this.errorMessage.set(result.error || 'Failed to upload logo');
       }
-    } catch (error: any) {
-      this.errorMessage.set(error.message || 'An unexpected error occurred');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.errorMessage.set(message || 'An unexpected error occurred');
     } finally {
       this.uploadingLogo.set(false);
       input.value = ''; // Reset input
     }
   }
+
+  triggerFileInput = (el: HTMLInputElement | null): void => {
+    el?.click();
+  }
+
 
   goBack(): void {
     window.history.back();

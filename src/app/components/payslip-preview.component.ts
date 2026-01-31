@@ -1,5 +1,5 @@
 import { Component, input, ChangeDetectionStrategy, computed, inject } from '@angular/core';
-import { PayslipData } from '../models/payslip.models';
+import { PayslipData, Client, Organization } from '../models/payslip.models';
 import { PayslipService } from '../services/payslip.service';
 import { CommonModule } from '@angular/common';
 
@@ -12,8 +12,8 @@ import { CommonModule } from '@angular/common';
 export class PayslipPreviewComponent {
   readonly payslipData = input.required<PayslipData | null>();
   // organization is optional now — client-first payloads are supported
-  readonly organization = input<any | null>();
-  readonly client = input<any | null>();
+  readonly organization = input<Organization | null>();
+  readonly client = input<Client | null>();
   readonly elementId = input<string>('payslip-preview');
   
   // Use DI instead of constructing service manually
@@ -36,6 +36,14 @@ export class PayslipPreviewComponent {
         website: ''
       }
     );
+  });
+
+  readonly displayEmail = computed(() => {
+    const d = this.displayEntity();
+    // Organization has 'email', Client uses 'contact_email'
+    if (d && 'email' in d && typeof (d as Organization).email === 'string') return (d as Organization).email;
+    if (d && 'contact_email' in d && typeof (d as Client).contact_email === 'string') return (d as Client).contact_email;
+    return '';
   });
 
   readonly earnings = computed(() => {
@@ -68,11 +76,12 @@ export class PayslipPreviewComponent {
     const data = this.payslipData();
     if (data) {
       const filename = `payslip_${data.employee.id}_${data.month}_${data.year}.pdf`;
-      this.payslipService.generatePDF(this.elementId(), filename);
+      void this.payslipService.generatePDF(this.elementId(), filename);
     }
   }
 
   print(): void {
+    // synchronous
     this.payslipService.printPayslip(this.elementId());
   }
 }

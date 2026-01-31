@@ -1,5 +1,5 @@
-import { Component, signal, ChangeDetectionStrategy, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -260,8 +260,6 @@ import { CommonModule } from '@angular/common';
   `
 })
 export class LandingComponent {
-  private router = inject(Router);
-
   readonly mobileMenuOpen = signal(false);
 
   readonly features = [
